@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -27,6 +29,7 @@ func main() {
 			iniciarMonitoramento()
 		case 2:
 			fmt.Println("Exibindo logs ...")
+			imprimeLogs()
 		case 0:
 			fmt.Println("Saindo do programa")
 			os.Exit(0)
@@ -74,7 +77,6 @@ func iniciarMonitoramento()  {
 		time.Sleep(delay * time.Minute)
 		fmt.Println("")
 	}
-	
 }
 
 func testaSite(site string) {
@@ -87,14 +89,19 @@ func testaSite(site string) {
 	switch resp.StatusCode {
 		case 200:
 			fmt.Println("Foi carregado com sucesso, Status Code:", resp.StatusCode)
+			registraLog(site, true)
 		case 401:
 			fmt.Println("A solicitação não foi aplicada porque não possui credenciais de autenticação válidas para o recurso de destino, Status Code:", resp.StatusCode)
+			registraLog(site, false)
 		case 403:
 			fmt.Println("O servidor não autorizou a emissão de um resposta, Status Code:", resp.StatusCode)
+			registraLog(site, false)
 		case 404:
 			fmt.Println("Não foi encontrado, Status Code:", resp.StatusCode)
+			registraLog(site, false)
 		default:
 			fmt.Println("Houve problemas, Status Code:", resp.StatusCode)
+			registraLog(site, false)
 	}
 }
 
@@ -124,4 +131,27 @@ func leSitesdoArquivo() []string {
 	arquivo.Close()
 
 	return sites
+}
+
+func registraLog(site string, status bool)  {
+	
+	arquivo, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
+	}
+
+	arquivo.WriteString(time.Now().Format("02/01/2006 15:04:05") + " - " + site + " - online: " + strconv.FormatBool(status) + "\n")
+	arquivo.Close()
+}
+
+func imprimeLogs()  {
+	
+	arquivo, err := ioutil.ReadFile("log.txt")
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
+	}
+
+	fmt.Println(string(arquivo))
 }
